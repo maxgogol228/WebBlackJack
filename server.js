@@ -290,23 +290,31 @@ io.on('connection', (socket) => {
   });
   
   socket.on('placeBet', (amount) => {
-    const player = gameState.players[socket.id];
-    if (!player || player.spectating) return;
-    if (gameState.gamePhase !== 'betting') return;
-    if (player.chips < amount) return;
-    if (amount < MIN_BET) return;
-    if (![1000, 2000, 5000, 10000].includes(amount)) return;
-    
-    player.bet += amount;
-    player.chips -= amount;
-    
-    io.emit('gameState', getPublicGameState());
-    
-    // Check if all active players have bet
-    const allBet = getActivePlayers().length === Object.keys(gameState.players).filter(id => !gameState.players[id].spectating).length;
-    if (allBet && getActivePlayers().length > 0) {
-      startRound();
-    }
+      const player = gameState.players[socket.id];
+      if (!player || player.spectating) return;
+      if (gameState.gamePhase !== 'betting') return;
+      if (player.chips < amount) return;
+      if (amount < MIN_BET) return;
+      if (![1000, 2000, 5000, 10000].includes(amount) && amount % 1000 !== 0) return;
+      
+      // Allow multiple bets
+      player.bet += amount;
+      player.chips -= amount;
+      
+      io.emit('gameState', getPublicGameState());
+      
+      // Check if all non-spectating players have placed bets
+      const nonSpectatingPlayers = Object.keys(gameState.players).filter(id => 
+          !gameState.players[id].spectating
+      );
+      const playersWithBets = nonSpectatingPlayers.filter(id => 
+          gameState.players[id].bet >= MIN_BET
+      );
+      
+      if (nonSpectatingPlayers.length > 0 && 
+          playersWithBets.length === nonSpectatingPlayers.length) {
+          startRound();
+      }
   });
   
   socket.on('hit', () => {
