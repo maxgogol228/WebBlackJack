@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Game</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="game-page">
+    <div id="game-container">
+        <div id="dealer-area">
+            <div class="dealer-label">DEALER</div>
+            <div id="dealer-cards" class="cards-container"></div>
+            <div id="dealer-score" class="score-display"></div>
+        </div>
+        
+        <div id="players-area">
+            <div id="seats-container"></div>
+        </div>
+        
+        <div id="controls-area">
+            <div id="player-info">
+                <div id="your-balance"></div>
+                <div id="your-bet"></div>
+            </div>
+            <div id="betting-controls" class="hidden">
+                <button onclick="placeBet(1000)" class="chip-btn chip-1000">1K</button>
+                <button onclick="placeBet(2000)" class="chip-btn chip-2000">2K</button>
+                <button onclick="placeBet(5000)" class="chip-btn chip-5000">5K</button>
+                <button onclick="placeBet(10000)" class="chip-btn chip-10000">10K</button>
+                <button onclick="placeBetAll()" class="chip-btn chip-all">All In</button>
+            </div>
+            <div id="action-controls" class="hidden">
+                <button onclick="hit()" class="action-btn hit-btn">HIT</button>
+                <button onclick="stand()" class="action-btn stand-btn">STAND</button>
+            </div>
+            <div id="spectator-message" class="hidden">
+                <p>Spectating - You'll join next round</p>
+            </div>
+        </div>
+        
+        <div id="game-phase" class="phase-display"></div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
