@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <h1 class="game-title">BLACKJACK</h1>
+        <div class="login-form">
+            <input type="text" id="inviteCode" placeholder="Enter invite code" class="login-input" autocomplete="off">
+            <input type="text" id="nickname" placeholder="Choose nickname" class="login-input" maxlength="20" autocomplete="off">
+            <button onclick="verifyAndJoin()" class="login-button">ENTER GAME</button>
+            <div id="error" class="error-message"></div>
+            <div id="attempts" class="attempts-message"></div>
+        </div>
+    </div>
+
+    <script>
+        let attempts = 0;
+        
+        async function verifyAndJoin() {
+            const code = document.getElementById('inviteCode').value;
+            const nickname = document.getElementById('nickname').value.trim();
+            const errorDiv = document.getElementById('error');
+            
+            if (!nickname) {
+                errorDiv.textContent = 'Please enter a nickname';
+                return;
+            }
+            
+            if (!code) {
+                errorDiv.textContent = 'Please enter invite code';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ code })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    sessionStorage.setItem('nickname', nickname);
+                    sessionStorage.setItem('verified', 'true');
+                    window.location.href = '/game.html';
+                } else {
+                    attempts++;
+                    document.getElementById('attempts').textContent = `Attempts: ${attempts}/5`;
+                    
+                    if (attempts >= 5) {
+                        document.getElementById('inviteCode').disabled = true;
+                        document.querySelector('.login-button').disabled = true;
+                        errorDiv.textContent = 'Too many attempts. Please wait 15 minutes.';
+                    } else {
+                        errorDiv.textContent = data.error || 'Invalid code';
+                    }
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Connection error. Please try again.';
+            }
+        }
+        
+        document.getElementById('inviteCode').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyAndJoin();
+        });
+        
+        document.getElementById('nickname').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('inviteCode').focus();
+        });
+    </script>
+</body>
+</html>
