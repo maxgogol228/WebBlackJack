@@ -1,6 +1,7 @@
 const socket = io();
 let myPlayerId = null;
 let gameState = null;
+let pendingBet = 0;
 
 // Check authentication
 if (!sessionStorage.getItem('verified')) {
@@ -12,40 +13,30 @@ socket.emit('join', { nickname });
 
 socket.on('gameState', (state) => {
     gameState = state;
+    myPlayerId = socket.id;
     render();
 });
 
 socket.on('spectating', (message) => {
     document.getElementById('spectator-message').classList.remove('hidden');
-    document.getElementById('betting-controls').classList.add('hidden');
+    document.getElementById('chips-area').classList.add('hidden');
     document.getElementById('action-controls').classList.add('hidden');
+    showMessage(message);
 });
 
 socket.on('error', (message) => {
-    alert(message);
+    showMessage(message, 'error');
 });
 
 function render() {
     if (!gameState) return;
     
-    // Render dealer
     renderDealer();
-    
-    // Render seats
     renderSeats();
-    
-    // Render controls
     renderControls();
-    
-    // Render phase
     renderPhase();
-    
-    // Find my player
-    myPlayerId = Object.keys(gameState.players).find(id => id === socket.id);
-    
-    if (myPlayerId) {
-        updatePlayerInfo();
-    }
+    updatePlayerInfo();
+    renderChips();
 }
 
 function renderDealer() {
@@ -53,13 +44,20 @@ function renderDealer() {
     const dealerScore = document.getElementById('dealer-score');
     
     dealerCards.innerHTML = '';
+    
+    if (gameState.dealer.cards.length === 0) {
+        dealerCards.innerHTML = '<div style="color: #444;">Waiting for players...</div>';
+        dealerScore.textContent = '';
+        return;
+    }
+    
     gameState.dealer.cards.forEach((card, index) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'card';
         
         if (index === 0 && gameState.dealer.hiddenCard) {
             cardDiv.classList.add('card-hidden');
-            cardDiv.textContent = '??';
+            cardDiv.textContent = '?';
         } else {
             cardDiv.textContent = `${card.value}${card.suit}`;
             if (card.suit === '♥' || card.suit === '♦') {
@@ -71,8 +69,6 @@ function renderDealer() {
     
     if (gameState.dealer.cards.length > 0) {
         dealerScore.textContent = `Score: ${gameState.dealer.score}`;
-    } else {
-        dealerScore.textContent = '';
     }
 }
 
@@ -90,26 +86,33 @@ function renderSeats() {
         if (player) {
             seat.classList.add('seat-occupied');
             
-            if (playerId === gameState.players[
-                Object.keys(gameState.players).find(id => 
-                    gameState.seats[gameState.players[id].seatIndex] === id && 
-                    id === Object.keys(gameState.players).filter(pid => 
-                        gameState.players[pid].bet > 0
-                    )[gameState.currentPlayerIndex]
-                )
-            ]) {
+            // Highlight active player
+            const activePlayers = Object.keys(gameState.players).filter(id => 
+                gameState.players[id].bet > 0 && 
+                !gameState.players[id].busted && 
+                !gameState.players[id].stood
+            );
+            const currentPlayerId = activePlayers[gameState.currentPlayerIndex];
+            
+            if (playerId === currentPlayerId && gameState.gamePhase === 'playing') {
                 seat.classList.add('seat-active');
             }
             
+            if (playerId === myPlayerId) {
+                seat.classList.add('seat-mine');
+            }
+            
             let seatHTML = `
-                <div class="seat-nickname">${player.nickname}</div>
-                <div class="seat-balance">Balance: ${player.chips.toLocaleString()}</div>
+                <div class="seat-nickname">${player.nickname}${playerId === myPlayerId ? ' (YOU)' : ''}</div>
+                <div class="seat-balance">💰 ${player.chips.toLocaleString()}</div>
             `;
             
+            // Show bet
             if (player.bet > 0) {
                 seatHTML += `<div class="seat-bet">Bet: ${player.bet.toLocaleString()}</div>`;
             }
             
+            // Show cards
             if (player.cards && player.cards.length > 0) {
                 seatHTML += '<div class="seat-cards">';
                 player.cards.forEach(card => {
@@ -117,14 +120,16 @@ function renderSeats() {
                     if (card.suit === '♥' || card.suit === '♦') {
                         color = 'style="color: #ff0000"';
                     }
-                    seatHTML += `<div class="card" ${color}>${card.value}${card.suit}</div>`;
+                    seatHTML += `<div class="card small-card" ${color}>${card.value}${card.suit}</div>`;
                 });
                 seatHTML += '</div>';
                 
                 if (player.busted) {
-                    seatHTML += '<div class="seat-score" style="color: #ff4444">BUSTED</div>';
+                    seatHTML += '<div class="seat-score busted">BUSTED</div>';
                 } else if (player.blackjack) {
-                    seatHTML += '<div class="seat-score" style="color: #ffd700">BLACKJACK!</div>';
+                    seatHTML += '<div class="seat-score blackjack">BLACKJACK!</div>';
+                } else if (player.stood) {
+                    seatHTML += `<div class="seat-score">Stand (${player.score})</div>`;
                 } else {
                     seatHTML += `<div class="seat-score">Score: ${player.score}</div>`;
                 }
@@ -132,22 +137,157 @@ function renderSeats() {
             
             seat.innerHTML = seatHTML;
         } else {
-            seat.innerHTML = '<div style="color: #444; text-align: center; padding-top: 50px;">Empty Seat</div>';
+            seat.innerHTML = `
+                <div class="empty-seat">
+                    <div class="seat-number">SEAT ${i + 1}</div>
+                    <div class="empty-text">Available</div>
+                </div>
+            `;
         }
         
         container.appendChild(seat);
     }
 }
 
+function renderChips() {
+    const player = myPlayerId ? gameState.players[myPlayerId] : null;
+    const chipsArea = document.getElementById('chips-area');
+    const chipsContainer = document.getElementById('chips-container');
+    
+    if (!player || player.spectating) {
+        chipsArea.classList.add('hidden');
+        return;
+    }
+    
+    if (gameState.gamePhase === 'betting' && player.bet === 0) {
+        chipsArea.classList.remove('hidden');
+        
+        const chips = [
+            { value: 1000, color: 'green', label: '1K' },
+            { value: 2000, color: 'blue', label: '2K' },
+            { value: 5000, color: 'orange', label: '5K' },
+            { value: 10000, color: 'red', label: '10K' },
+            { value: 'all', color: 'gold', label: 'ALL IN' }
+        ];
+        
+        chipsContainer.innerHTML = '';
+        
+        chips.forEach(chip => {
+            const chipDiv = document.createElement('div');
+            chipDiv.className = `chip ${chip.color}-chip`;
+            
+            if (chip.value === 'all') {
+                chipDiv.classList.add('all-in-chip');
+                const availableChips = [1000, 2000, 5000, 10000].filter(c => c <= player.chips);
+                if (availableChips.length === 0 || player.chips < 1000) {
+                    chipDiv.classList.add('chip-disabled');
+                }
+            } else if (player.chips < chip.value) {
+                chipDiv.classList.add('chip-disabled');
+            }
+            
+            chipDiv.innerHTML = `
+                <div class="chip-value">${chip.label}</div>
+                ${chip.value !== 'all' ? `<div class="chip-amount">${chip.value.toLocaleString()}</div>` : ''}
+            `;
+            
+            chipDiv.addEventListener('click', () => {
+                if (chip.value === 'all') {
+                    placeBetAll();
+                } else if (player.chips >= chip.value) {
+                    addToBet(chip.value);
+                }
+            });
+            
+            chipsContainer.appendChild(chipDiv);
+        });
+        
+        updateBetDisplay();
+    } else {
+        chipsArea.classList.add('hidden');
+    }
+}
+
+function addToBet(amount) {
+    const player = gameState.players[myPlayerId];
+    if (!player || gameState.gamePhase !== 'betting') return;
+    
+    if (player.chips >= amount) {
+        pendingBet += amount;
+        player.chips -= amount;
+        updateBetDisplay();
+        updatePlayerInfo();
+        renderChips();
+    }
+}
+
+function clearBet() {
+    const player = gameState.players[myPlayerId];
+    if (!player) return;
+    
+    player.chips += pendingBet;
+    pendingBet = 0;
+    updateBetDisplay();
+    updatePlayerInfo();
+    renderChips();
+}
+
+function confirmBet() {
+    if (pendingBet >= 1000) {
+        socket.emit('placeBet', pendingBet);
+        pendingBet = 0;
+        updateBetDisplay();
+        renderChips();
+    }
+}
+
+function updateBetDisplay() {
+    const betControls = document.getElementById('bet-controls');
+    const clearBtn = document.getElementById('clear-bet-btn');
+    const confirmBtn = document.getElementById('confirm-bet-btn');
+    
+    if (pendingBet > 0) {
+        clearBtn.disabled = false;
+        confirmBtn.disabled = pendingBet < 1000;
+        document.getElementById('your-bet').textContent = `Pending bet: ${pendingBet.toLocaleString()} chips`;
+        document.getElementById('your-bet').style.color = '#4CAF50';
+    } else {
+        clearBtn.disabled = true;
+        confirmBtn.disabled = true;
+        document.getElementById('your-bet').textContent = '';
+    }
+}
+
+function placeBet(amount) {
+    const player = gameState.players[myPlayerId];
+    if (!player || gameState.gamePhase !== 'betting') return;
+    
+    if (player.chips >= amount) {
+        socket.emit('placeBet', amount);
+    }
+}
+
+function placeBetAll() {
+    const player = gameState.players[myPlayerId];
+    const availableChips = [1000, 2000, 5000, 10000].filter(chip => chip <= player.chips);
+    if (availableChips.length > 0) {
+        pendingBet += availableChips[0];
+        player.chips -= availableChips[0];
+        updateBetDisplay();
+        updatePlayerInfo();
+        renderChips();
+    }
+}
+
 function renderControls() {
-    const bettingControls = document.getElementById('betting-controls');
     const actionControls = document.getElementById('action-controls');
     const spectatorMessage = document.getElementById('spectator-message');
+    const chipsArea = document.getElementById('chips-area');
     
     const player = myPlayerId ? gameState.players[myPlayerId] : null;
     
     if (!player || player.spectating) {
-        bettingControls.classList.add('hidden');
+        chipsArea.classList.add('hidden');
         actionControls.classList.add('hidden');
         spectatorMessage.classList.remove('hidden');
         return;
@@ -155,22 +295,13 @@ function renderControls() {
     
     spectatorMessage.classList.add('hidden');
     
-    if (gameState.gamePhase === 'betting') {
-        bettingControls.classList.remove('hidden');
-        actionControls.classList.add('hidden');
-        
-        // Disable buttons if player can't afford
-        document.querySelectorAll('.chip-btn').forEach(btn => {
-            const amount = parseInt(btn.textContent.replace('K', '000'));
-            if (amount) {
-                btn.disabled = player.chips < amount || player.bet > 0;
-            }
-        });
-    } else if (gameState.gamePhase === 'playing') {
-        bettingControls.classList.add('hidden');
+    if (gameState.gamePhase === 'playing') {
+        chipsArea.classList.add('hidden');
         
         const activePlayers = Object.keys(gameState.players).filter(id => 
-            gameState.players[id].bet > 0 && !gameState.players[id].busted
+            gameState.players[id].bet > 0 && 
+            !gameState.players[id].busted && 
+            !gameState.players[id].stood
         );
         const currentPlayerId = activePlayers[gameState.currentPlayerIndex];
         
@@ -180,7 +311,6 @@ function renderControls() {
             actionControls.classList.add('hidden');
         }
     } else {
-        bettingControls.classList.add('hidden');
         actionControls.classList.add('hidden');
     }
 }
@@ -190,41 +320,46 @@ function renderPhase() {
     
     switch(gameState.gamePhase) {
         case 'betting':
-            phaseDisplay.textContent = 'PLACE YOUR BETS';
+            phaseDisplay.textContent = '🎲 PLACE YOUR BETS';
+            phaseDisplay.style.color = '#4CAF50';
             break;
         case 'playing':
-            phaseDisplay.textContent = 'GAME IN PROGRESS';
+            phaseDisplay.textContent = '🎯 GAME IN PROGRESS';
+            phaseDisplay.style.color = '#FF9800';
             break;
         case 'dealerTurn':
-            phaseDisplay.textContent = 'DEALER\'S TURN';
+            phaseDisplay.textContent = '🃏 DEALER\'S TURN';
+            phaseDisplay.style.color = '#2196F3';
             break;
         case 'results':
-            phaseDisplay.textContent = 'ROUND COMPLETE';
+            phaseDisplay.textContent = '💰 ROUND COMPLETE';
+            phaseDisplay.style.color = '#FFD700';
             break;
     }
 }
 
 function updatePlayerInfo() {
-    const player = gameState.players[myPlayerId];
-    document.getElementById('your-balance').textContent = `Balance: ${player.chips.toLocaleString()} chips`;
+    const player = myPlayerId ? gameState.players[myPlayerId] : null;
+    if (!player) return;
     
-    if (player.bet > 0) {
-        document.getElementById('your-bet').textContent = `Current bet: ${player.bet.toLocaleString()}`;
-    } else {
-        document.getElementById('your-bet').textContent = '';
+    document.getElementById('your-balance').textContent = 
+        `💰 Your Balance: ${player.chips.toLocaleString()} chips`;
+    
+    if (player.bet > 0 && pendingBet === 0) {
+        document.getElementById('your-bet').textContent = `Bet placed: ${player.bet.toLocaleString()} chips`;
+        document.getElementById('your-bet').style.color = '#FFD700';
     }
 }
 
-function placeBet(amount) {
-    socket.emit('placeBet', amount);
-}
-
-function placeBetAll() {
-    const player = gameState.players[myPlayerId];
-    const availableChips = [1000, 2000, 5000, 10000].filter(chip => chip <= player.chips);
-    if (availableChips.length > 0) {
-        socket.emit('placeBet', Math.max(...availableChips));
-    }
+function showMessage(msg, type = 'info') {
+    const messageArea = document.getElementById('message-area');
+    messageArea.textContent = msg;
+    messageArea.className = `message ${type}`;
+    messageArea.style.display = 'block';
+    
+    setTimeout(() => {
+        messageArea.style.display = 'none';
+    }, 3000);
 }
 
 function hit() {
