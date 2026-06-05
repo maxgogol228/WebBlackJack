@@ -24,12 +24,13 @@
                 <div id="your-balance"></div>
                 <div id="your-bet"></div>
             </div>
-            <div id="betting-controls" class="hidden">
-                <button onclick="placeBet(1000)" class="chip-btn chip-1000">1K</button>
-                <button onclick="placeBet(2000)" class="chip-btn chip-2000">2K</button>
-                <button onclick="placeBet(5000)" class="chip-btn chip-5000">5K</button>
-                <button onclick="placeBet(10000)" class="chip-btn chip-10000">10K</button>
-                <button onclick="placeBetAll()" class="chip-btn chip-all">All In</button>
+            <div id="chips-area" class="hidden">
+                <div class="chips-label">YOUR CHIPS - CLICK TO BET</div>
+                <div id="chips-container"></div>
+                <div id="bet-controls">
+                    <button onclick="clearBet()" class="control-btn clear-btn" id="clear-bet-btn" disabled>Clear Bet</button>
+                    <button onclick="confirmBet()" class="control-btn confirm-btn" id="confirm-bet-btn" disabled>Confirm Bet</button>
+                </div>
             </div>
             <div id="action-controls" class="hidden">
                 <button onclick="hit()" class="action-btn hit-btn">HIT</button>
@@ -41,6 +42,7 @@
         </div>
         
         <div id="game-phase" class="phase-display"></div>
+        <div id="message-area"></div>
     </div>
 
     <script src="game.js"></script>
