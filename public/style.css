@@ -1,0 +1,323 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+}
+
+/* Login Page */
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.login-container {
+    background: #1a1a1a;
+    padding: 3rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+    max-width: 400px;
+    width: 90%;
+}
+
+.game-title {
+    text-align: center;
+    font-size: 2.5rem;
+    color: #c4a747;
+    margin-bottom: 2rem;
+    letter-spacing: 0.5rem;
+}
+
+.login-input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 1rem;
+    background: #0a0a0a;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: #c4a747;
+}
+
+.login-button {
+    width: 100%;
+    padding: 12px;
+    background: #c4a747;
+    color: #0a0a0a;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-button:hover:not(:disabled) {
+    background: #d4b757;
+}
+
+.login-button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: #ff4444;
+    margin-top: 1rem;
+    text-align: center;
+    min-height: 20px;
+}
+
+.attempts-message {
+    color: #888;
+    text-align: center;
+    margin-top: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Game Page */
+.game-page {
+    padding: 20px;
+}
+
+#game-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#dealer-area {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.dealer-label {
+    color: #c4a747;
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    letter-spacing: 0.3rem;
+}
+
+.cards-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    min-height: 100px;
+    flex-wrap: wrap;
+}
+
+.card {
+    background: #fff;
+    color: #000;
+    padding: 15px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1.2rem;
+    min-width: 60px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.card-hidden {
+    background: #c4a747;
+    color: #c4a747;
+}
+
+.score-display {
+    color: #888;
+    font-size: 1.1rem;
+}
+
+#seats-container {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.seat {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 200px;
+}
+
+.seat-occupied {
+    border-color: #c4a747;
+}
+
+.seat-active {
+    border-color: #4CAF50;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.seat-nickname {
+    color: #c4a747;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+}
+
+.seat-balance {
+    color: #888;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+}
+
+.seat-bet {
+    color: #ffd700;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.seat-cards {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.seat-score {
+    color: #e0e0e0;
+    font-size: 0.9rem;
+}
+
+#controls-area {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+#player-info {
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+}
+
+#your-balance {
+    color: #c4a747;
+    margin-bottom: 5px;
+}
+
+#your-bet {
+    color: #ffd700;
+}
+
+.chip-btn {
+    background: #0a0a0a;
+    border: 2px solid;
+    color: #e0e0e0;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 50%;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 60px;
+    height: 60px;
+}
+
+.chip-1000 { border-color: #4CAF50; color: #4CAF50; }
+.chip-2000 { border-color: #2196F3; color: #2196F3; }
+.chip-5000 { border-color: #FF9800; color: #FF9800; }
+.chip-10000 { border-color: #f44336; color: #f44336; }
+.chip-all { 
+    border-color: #c4a747; 
+    color: #c4a747;
+    width: auto;
+    border-radius: 25px;
+}
+
+.chip-btn:hover:not(:disabled) {
+    background: #2a2a2a;
+    transform: scale(1.1);
+}
+
+.chip-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn {
+    padding: 15px 40px;
+    margin: 10px;
+    border: 2px solid;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    border-radius: 4px;
+}
+
+.hit-btn {
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.stand-btn {
+    border-color: #f44336;
+    color: #f44336;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: #2a2a2a;
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.hidden {
+    display: none;
+}
+
+.phase-display {
+    text-align: center;
+    margin-top: 20px;
+    color: #c4a747;
+    font-size: 1.1rem;
+    letter-spacing: 0.2rem;
+}
+
+#spectator-message {
+    color: #ff9800;
+    font-size: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #seats-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .game-title {
+        font-size: 2rem;
+    }
+}
