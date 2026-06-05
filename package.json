@@ -1,0 +1,14 @@
+{
+  "name": "blackjack-game",
+  "version": "1.0.0",
+  "description": "Online Blackjack for friends",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "express-rate-limit": "^6.7.0"
+  }
+}
